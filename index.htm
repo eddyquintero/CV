@@ -1,0 +1,967 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PasaATS — Crea tu CV listo para ATS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --paper:#FAF8F5;
+    --panel:#FFFFFF;
+    --ink:#1C1D1F;
+    --ink-soft:#5B584F;
+    --ink-faint:#8B8779;
+    --accent:#2F5233;
+    --accent-dark:#22401F;
+    --accent-soft:#E4ECE1;
+    --gold:#A9812F;
+    --line:#DED8CB;
+    --danger:#B3432B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand .mark{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:5px;letter-spacing:0.5px;}
+  .brand .name{font-family:'Fraunces',serif;font-weight:600;font-size:20px;}
+  .topbar .tagline{color:var(--ink-faint);font-size:13px;display:none;}
+  @media(min-width:760px){.topbar .tagline{display:block;}}
+
+  .hero{padding:40px 32px 8px;max-width:1180px;margin:0 auto;}
+  .hero h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(28px,4vw,40px);line-height:1.15;max-width:620px;}
+  .hero p{color:var(--ink-soft);max-width:520px;margin-top:12px;font-size:15.5px;line-height:1.55;}
+
+  /* ---------- Layout ---------- */
+  .app{max-width:1180px;margin:28px auto 80px;padding:0 32px;display:grid;grid-template-columns:400px 1fr;gap:28px;align-items:start;}
+  @media(max-width:960px){.app{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px;}
+  .panel h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-weight:600;margin-bottom:14px;}
+  .panel h3 .step{color:var(--ink-faint);margin-right:6px;}
+
+  /* ---------- Template picker ---------- */
+  .tpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:460px;overflow-y:auto;padding-right:4px;}
+  .tpl-group-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-faint);font-weight:600;margin:14px 0 8px;}
+  .tpl-group-label:first-child{margin-top:0;}
+  @media(max-width:520px){.tpl-grid{grid-template-columns:1fr;}}
+  .tpl-card{border:2px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;transition:border-color .15s ease, transform .15s ease;background:#fff;}
+  .tpl-card:hover{transform:translateY(-2px);}
+  .tpl-card.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .mini{height:92px;background:#fff;border:1px solid #eee;border-radius:4px;overflow:hidden;padding:8px 9px;}
+  .mini-line{height:4px;background:#e3e0d6;border-radius:2px;margin-bottom:4px;}
+  .tpl-card .label{font-size:12px;font-weight:600;text-align:center;margin-top:8px;}
+  .tpl-card .sub{font-size:10.5px;color:var(--ink-faint);text-align:center;}
+
+  .mini-atemporal .mini-name{width:60%;height:6px;background:var(--ink);margin:0 auto 5px;border-radius:2px;}
+  .mini-atemporal .mini-line{width:70%;margin-left:auto;margin-right:auto;}
+  .mini-atemporal .mini-hdr{width:40%;height:3px;background:var(--accent);margin:8px auto 4px;}
+
+  .mini-claridad .mini-name{width:55%;height:6px;background:var(--ink);margin-bottom:4px;border-radius:2px;}
+  .mini-claridad .mini-hdr{width:35%;height:3px;background:var(--accent);margin:9px 0 4px;}
+
+  .mini-firmeza .mini-name{width:65%;height:7px;background:var(--ink);margin-bottom:6px;border-radius:2px;}
+  .mini-firmeza .mini-hdr{width:100%;height:9px;background:var(--accent-soft);margin:9px 0 5px;}
+
+  .mini-dot{border-radius:50%;flex:0 0 auto;}
+
+  /* ---------- Dropzone ---------- */
+  .dropzone{border:1.5px dashed var(--line);border-radius:8px;padding:22px 16px;text-align:center;cursor:pointer;transition:border-color .15s ease, background .15s ease;}
+  .dropzone:hover, .dropzone.drag{border-color:var(--accent);background:var(--accent-soft);}
+  .dropzone .dz-icon{font-size:22px;margin-bottom:6px;}
+  .dropzone .dz-title{font-weight:600;font-size:14px;}
+  .dropzone .dz-sub{color:var(--ink-faint);font-size:12.5px;margin-top:4px;}
+  input[type=file]{display:none;}
+
+  .scanlog{margin-top:14px;background:var(--ink);border-radius:8px;padding:14px 16px;display:none;}
+  .scanlog.show{display:block;}
+  .scanlog .row{color:#EDEBE3;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.9;opacity:0;animation:fadein .25s ease forwards;}
+  @keyframes fadein{to{opacity:1;}}
+  .scanbar{height:2px;width:100%;background:#3a3a3a;border-radius:2px;overflow:hidden;margin-bottom:10px;position:relative;}
+  .scanbar::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:var(--gold);animation:sweep 1.1s linear infinite;}
+  .scanbar.done::after{display:none;}
+  .scanbar.done{background:var(--accent);}
+  @keyframes sweep{0%{left:-40%;}100%{left:100%;}}
+
+  .manual-note{font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.5;}
+
+  /* ---------- Form ---------- */
+  details.acc{border-top:1px solid var(--line);}
+  details.acc:first-child{border-top:none;}
+  details.acc summary{cursor:pointer;padding:12px 2px;font-weight:600;font-size:13.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;}
+  details.acc summary::-webkit-details-marker{display:none;}
+  details.acc summary::after{content:'+';color:var(--ink-faint);font-size:16px;}
+  details.acc[open] summary::after{content:'–';}
+  .acc-body{padding:2px 2px 16px;display:flex;flex-direction:column;gap:10px;}
+  label.field-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-faint);font-weight:600;margin-bottom:3px;display:block;}
+  input[type=text], textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-family:'Inter',sans-serif;font-size:13.5px;color:var(--ink);background:#fff;}
+  input[type=text]:focus, textarea:focus{outline:none;border-color:var(--accent);}
+  textarea{resize:vertical;min-height:72px;line-height:1.5;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .photo-field{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:2px;}
+  .photo-row{display:flex;align-items:center;gap:12px;}
+  .photo-preview{width:56px;height:56px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;}
+  .photo-preview span{font-size:9.5px;color:var(--ink-faint);text-align:center;line-height:1.2;}
+  .photo-preview img{width:100%;height:100%;object-fit:cover;}
+  .photo-actions{display:flex;align-items:center;gap:12px;}
+  .btn.small{padding:8px 14px;font-size:12.5px;}
+  .btn-link{background:none;border:none;color:var(--danger);font-size:12.5px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;}
+  #photoInput{display:none;}
+
+  /* ---------- Ortografía ---------- */
+  .spell-box{border-top:1px solid var(--line);padding-top:14px;margin-top:4px;}
+  .spell-results{margin-top:10px;}
+  .spell-hint{font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.5;}
+  .spell-ok{font-size:13px;color:var(--accent);font-weight:600;}
+  .spell-list{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .spell-list li{font-size:13px;color:var(--ink-soft);background:#FBF3EA;border:1px solid #EFDFC9;border-radius:6px;padding:7px 10px;}
+  .spell-list li b{color:var(--danger);font-weight:600;}
+  .spell-list li .arrow{color:var(--ink-faint);margin:0 4px;}
+  .spell-list li .fix{color:var(--accent);font-weight:600;}
+  .spell-list li .where{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-faint);margin-top:2px;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .checklist li{font-size:13px;color:var(--ink-soft);display:flex;gap:8px;align-items:flex-start;}
+  .checklist li .ok{color:var(--accent);font-weight:700;}
+
+  /* ---------- Preview ---------- */
+  .preview-wrap{position:sticky;top:20px;}
+  .preview-toolbar{display:flex;justify-content:flex-end;gap:10px;margin-bottom:12px;}
+  .btn{font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;padding:10px 18px;border-radius:7px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;}
+  .btn.secondary{background:#fff;color:var(--ink);}
+  .btn:hover{opacity:.9;}
+
+  .preview-shell{background:#EFEBE2;border-radius:12px;padding:24px;min-height:400px;display:flex;justify-content:center;}
+  .preview-empty{align-self:center;text-align:center;color:var(--ink-faint);font-size:13.5px;max-width:280px;margin:40px auto;}
+  .preview-empty .big{font-size:26px;margin-bottom:8px;}
+
+  .cv-preview{width:100%;max-width:760px;background:#fff;padding:50px 54px;box-shadow:0 8px 30px rgba(0,0,0,.08);font-size:13.5px;line-height:1.55;color:var(--ink);}
+  .cv-preview .cv-contact{color:var(--ink-soft);font-size:12px;margin-top:6px;}
+  .cv-preview .cv-body{color:var(--ink-soft);margin-top:6px;}
+  .cv-preview .cv-body.pre{white-space:pre-line;}
+  .cv-preview .cv-section{margin-top:20px;}
+  .cv-preview .cv-section:first-of-type{margin-top:26px;}
+
+  /* Foto: estructura genérica reutilizada por todas las plantillas */
+  .cv-head-inner{display:flex;align-items:center;gap:16px;}
+  .cv-head-text{min-width:0;flex:1;}
+  .cv-photo-wrap{flex:0 0 auto;width:72px;height:72px;border-radius:50%;overflow:hidden;background:#eee;}
+  .cv-photo{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* Template: Atemporal (classic serif) */
+  .tpl-atemporal .cv-head{text-align:center;border-bottom:2px solid var(--ink);padding-bottom:14px;}
+  .tpl-atemporal .cv-head-inner{flex-direction:column;align-items:center;}
+  .tpl-atemporal .cv-photo-wrap{width:78px;height:78px;margin-bottom:6px;}
+  .tpl-atemporal .cv-head h1{font-family:'Fraunces',serif;font-weight:500;font-size:29px;letter-spacing:.3px;}
+  .tpl-atemporal .cv-role{font-style:italic;color:var(--ink-soft);margin-top:4px;font-size:14px;}
+  .tpl-atemporal .cv-contact{text-align:center;}
+  .tpl-atemporal .cv-section h2{font-family:'Fraunces',serif;font-weight:600;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:5px;}
+
+  /* Template: Claridad (modern sans) */
+  .tpl-claridad .cv-head{border-top:3px solid var(--accent);padding-top:12px;}
+  .tpl-claridad .cv-photo-wrap{width:62px;height:62px;border-radius:10px;}
+  .tpl-claridad .cv-head h1{font-family:'Inter',sans-serif;font-weight:800;font-size:25px;letter-spacing:-.4px;}
+  .tpl-claridad .cv-role{color:var(--accent);font-weight:600;margin-top:3px;font-size:13.5px;}
+  .tpl-claridad .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);border-bottom:2px solid var(--accent-soft);padding-bottom:5px;}
+
+  /* Template: Firmeza (bold executive) */
+  .tpl-firmeza .cv-head h1{font-family:'Fraunces',serif;font-weight:700;font-size:31px;}
+  .tpl-firmeza .cv-photo-wrap{width:68px;height:68px;border-radius:8px;border:2px solid var(--gold);}
+  .tpl-firmeza .cv-role{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:5px;text-transform:uppercase;letter-spacing:.5px;}
+  .tpl-firmeza .cv-head{border-bottom:3px solid var(--gold);padding-bottom:12px;}
+  .tpl-firmeza .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;background:var(--accent-soft);color:var(--accent-dark);padding:6px 10px;border-radius:3px;}
+
+  /* ===== 10 plantillas con foto ===== */
+
+  /* Retrato: foto circular grande, centrada, serif clásico */
+  .tpl-retrato{--accent:#2E4B6B;}
+  .tpl-retrato .cv-head{text-align:center;border-bottom:1px solid var(--line);padding-bottom:16px;}
+  .tpl-retrato .cv-head-inner{flex-direction:column;align-items:center;}
+  .tpl-retrato .cv-photo-wrap{width:104px;height:104px;border:3px solid var(--accent);margin-bottom:8px;}
+  .tpl-retrato .cv-head h1{font-family:'Fraunces',serif;font-weight:500;font-size:28px;}
+  .tpl-retrato .cv-role{color:var(--accent);margin-top:3px;font-size:13.5px;}
+  .tpl-retrato .cv-contact{text-align:center;}
+  .tpl-retrato .cv-section h2{font-family:'Fraunces',serif;font-weight:600;font-size:13.5px;letter-spacing:1.3px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:5px;}
+
+  /* Perfil: foto cuadrada redondeada a la izquierda, barra de color */
+  .tpl-perfil{--accent:#1F6F6F;}
+  .tpl-perfil .cv-photo-wrap{width:68px;height:68px;border-radius:12px;}
+  .tpl-perfil .cv-head h1{font-family:'Inter',sans-serif;font-weight:700;font-size:24px;}
+  .tpl-perfil .cv-role{color:var(--accent);font-weight:600;margin-top:2px;font-size:13px;}
+  .tpl-perfil .cv-head{border-bottom:1px solid var(--line);padding-bottom:14px;}
+  .tpl-perfil .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);border-left:3px solid var(--accent);padding-left:9px;}
+
+  /* Compacto: foto pequeña en línea con el nombre, muy denso */
+  .tpl-compacto{--accent:#4A4A4A;}
+  .tpl-compacto .cv-photo-wrap{width:42px;height:42px;}
+  .tpl-compacto .cv-head{border-bottom:1px dotted var(--line);padding-bottom:10px;}
+  .tpl-compacto .cv-head-inner{gap:10px;}
+  .tpl-compacto .cv-head h1{font-family:'Inter',sans-serif;font-weight:700;font-size:19px;}
+  .tpl-compacto .cv-role{color:var(--ink-soft);font-size:12px;margin-top:1px;}
+  .tpl-compacto .cv-section{margin-top:14px;}
+  .tpl-compacto .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px dotted var(--line);padding-bottom:3px;}
+
+  /* Acento: franja de color a todo el ancho, foto superpuesta */
+  .tpl-acento{--accent:#7A2E3B;--accent-soft:#F3E4E6;}
+  .tpl-acento .cv-head{background:var(--accent);color:#fff;margin:-50px -54px 20px;padding:26px 54px 30px;}
+  .tpl-acento .cv-photo-wrap{width:80px;height:80px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .tpl-acento .cv-head h1{font-family:'Inter',sans-serif;font-weight:800;font-size:25px;color:#fff;}
+  .tpl-acento .cv-role{color:#EBD3D6;margin-top:2px;font-size:13px;}
+  .tpl-acento .cv-contact{color:#EBD3D6;}
+  .tpl-acento .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;background:var(--accent-soft);color:var(--accent);padding:6px 10px;border-radius:3px;}
+
+  /* Columna: foto a la derecha del nombre, doble filete */
+  .tpl-columna{--accent:#2B6777;}
+  .tpl-columna .cv-head-inner{flex-direction:row-reverse;}
+  .tpl-columna .cv-photo-wrap{width:66px;height:66px;border-radius:10px;}
+  .tpl-columna .cv-head{border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);padding:10px 0;}
+  .tpl-columna .cv-head h1{font-family:'Inter',sans-serif;font-weight:700;font-size:23px;}
+  .tpl-columna .cv-role{color:var(--accent);margin-top:2px;font-size:13px;}
+  .tpl-columna .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);}
+
+  /* Minimal: foto diminuta arriba a la derecha, casi sin líneas */
+  .tpl-minimal{--accent:#333333;}
+  .tpl-minimal .cv-head-inner{flex-direction:row-reverse;justify-content:flex-end;align-items:flex-start;}
+  .tpl-minimal .cv-photo-wrap{width:40px;height:40px;border-radius:6px;}
+  .tpl-minimal .cv-head h1{font-family:'Inter',sans-serif;font-weight:600;font-size:22px;letter-spacing:-.3px;}
+  .tpl-minimal .cv-role{color:var(--ink-faint);margin-top:2px;font-size:13px;}
+  .tpl-minimal .cv-section{margin-top:26px;}
+  .tpl-minimal .cv-section h2{font-family:'Inter',sans-serif;font-weight:600;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);}
+
+  /* Elegante: foto circular con filete dorado, serif itálico */
+  .tpl-elegante{--accent:#A9812F;}
+  .tpl-elegante .cv-photo-wrap{width:84px;height:84px;box-shadow:0 0 0 3px var(--gold);}
+  .tpl-elegante .cv-head{border-bottom:1px solid var(--line);padding-bottom:14px;}
+  .tpl-elegante .cv-head h1{font-family:'Fraunces',serif;font-weight:500;font-size:27px;}
+  .tpl-elegante .cv-role{font-style:italic;color:var(--ink-soft);margin-top:3px;font-size:13.5px;}
+  .tpl-elegante .cv-section h2{font-family:'Fraunces',serif;font-weight:600;font-size:13.5px;letter-spacing:1px;color:var(--ink);}
+  .tpl-elegante .cv-section h2::after{content:'';display:block;width:26px;height:2px;background:var(--gold);margin-top:5px;}
+
+  /* Moderno Bold: foto cuadrada sin radio, barras negras sólidas */
+  .tpl-boldmoderno{--accent:#B23A2E;}
+  .tpl-boldmoderno .cv-photo-wrap{width:76px;height:76px;border-radius:2px;}
+  .tpl-boldmoderno .cv-head h1{font-family:'Inter',sans-serif;font-weight:800;font-size:27px;letter-spacing:-.5px;}
+  .tpl-boldmoderno .cv-role{color:var(--accent);font-weight:700;margin-top:2px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;}
+  .tpl-boldmoderno .cv-head{border-bottom:4px solid var(--ink);padding-bottom:12px;}
+  .tpl-boldmoderno .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:#fff;padding:6px 10px;border-radius:2px;}
+
+  /* Corporativo: franja oscura, foto centrada superpuesta, formal */
+  .tpl-corporativo{--accent:#12283F;}
+  .tpl-corporativo .cv-head{background:var(--accent);color:#fff;text-align:center;margin:-50px -54px 22px;padding:28px 54px 34px;}
+  .tpl-corporativo .cv-head-inner{flex-direction:column;align-items:center;}
+  .tpl-corporativo .cv-photo-wrap{width:88px;height:88px;border:3px solid #fff;margin-bottom:8px;}
+  .tpl-corporativo .cv-head h1{font-family:'Fraunces',serif;font-weight:600;font-size:25px;letter-spacing:1px;text-transform:uppercase;color:#fff;}
+  .tpl-corporativo .cv-role{color:#B9C4D1;margin-top:3px;font-size:13px;}
+  .tpl-corporativo .cv-contact{color:#B9C4D1;text-align:center;}
+  .tpl-corporativo .cv-section h2{font-family:'Inter',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);}
+  .tpl-corporativo .cv-section h2::before{content:'';display:inline-block;width:8px;height:8px;background:var(--accent);margin-right:7px;}
+
+  /* Creativo: foto circular con anillo doble, encabezado asimétrico */
+  .tpl-creativo{--accent:#B85C38;--accent-soft:#F7E7DE;}
+  .tpl-creativo .cv-head{background:var(--accent-soft);border-radius:12px;padding:20px;}
+  .tpl-creativo .cv-head-inner{flex-direction:row-reverse;}
+  .tpl-creativo .cv-photo-wrap{width:86px;height:86px;box-shadow:0 0 0 4px #fff, 0 0 0 7px var(--accent);}
+  .tpl-creativo .cv-head h1{font-family:'Inter',sans-serif;font-weight:800;font-size:24px;color:var(--accent-dark);}
+  .tpl-creativo .cv-role{color:var(--accent);font-weight:600;margin-top:2px;font-size:13px;}
+  .tpl-creativo .cv-section h2{display:inline-block;font-family:'Inter',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;background:var(--accent-soft);color:var(--accent);padding:5px 12px;border-radius:20px;}
+
+  /* ---------- Print ---------- */
+  @media print{
+    body *{visibility:hidden;}
+    .cv-preview, .cv-preview *{visibility:visible;}
+    .cv-preview{position:absolute;top:0;left:0;width:100%;max-width:100%;box-shadow:none;padding:14mm 16mm;}
+    @page{margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="mark">ATS://</span><span class="name">PasaATS</span></div>
+  <div class="tagline">Sube tu CV en PDF y arma una versión que los sistemas de selección puedan leer sin problema</div>
+</div>
+
+<div class="hero">
+  <h1>Un CV que la máquina lee tan bien como la persona</h1>
+  <p>Elige un estilo, sube tu CV actual en PDF y extraemos tus datos automáticamente para que revises y descargues una versión de una sola columna, sin tablas ni íconos — el formato que los sistemas ATS procesan sin perder información.</p>
+</div>
+
+<div class="app">
+  <div class="controls">
+
+    <div class="panel">
+      <h3><span class="step">1</span>Elige tu plantilla</h3>
+      <div class="tpl-group-label">Clásicas</div>
+      <div class="tpl-grid" id="tplGrid">
+        <div class="tpl-card active mini-atemporal" data-tpl="atemporal">
+          <div class="mini"><div class="mini-name"></div><div class="mini-line" style="width:50%"></div><div class="mini-hdr"></div><div class="mini-line"></div><div class="mini-line" style="width:80%"></div></div>
+          <div class="label">Atemporal</div><div class="sub">Serif, centrado</div>
+        </div>
+        <div class="tpl-card mini-claridad" data-tpl="claridad">
+          <div class="mini"><div class="mini-name"></div><div class="mini-line" style="width:40%"></div><div class="mini-hdr"></div><div class="mini-line"></div><div class="mini-line" style="width:70%"></div></div>
+          <div class="label">Claridad</div><div class="sub">Sans, minimalista</div>
+        </div>
+        <div class="tpl-card mini-firmeza" data-tpl="firmeza">
+          <div class="mini"><div class="mini-name"></div><div class="mini-line" style="width:35%"></div><div class="mini-hdr"></div><div class="mini-line"></div><div class="mini-line" style="width:75%"></div></div>
+          <div class="label">Firmeza</div><div class="sub">Bloques marcados</div>
+        </div>
+
+        <div class="tpl-group-label" style="grid-column:1/-1;">Con foto</div>
+
+        <div class="tpl-card" data-tpl="retrato">
+          <div class="mini" style="display:flex;flex-direction:column;align-items:center;">
+            <div class="mini-dot" style="width:22px;height:22px;background:#2E4B6B;"></div>
+            <div class="mini-line" style="width:55%;margin-top:6px;"></div>
+            <div class="mini-line" style="width:75%;"></div>
+            <div class="mini-line" style="width:60%;"></div>
+          </div>
+          <div class="label">Retrato</div><div class="sub">Foto centrada</div>
+        </div>
+        <div class="tpl-card" data-tpl="perfil">
+          <div class="mini" style="display:flex;gap:6px;">
+            <div class="mini-dot" style="width:22px;height:22px;border-radius:6px;background:#1F6F6F;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:85%;"></div><div class="mini-line" style="width:55%;"></div><div class="mini-hdr" style="background:#1F6F6F;"></div><div class="mini-line"></div></div>
+          </div>
+          <div class="label">Perfil</div><div class="sub">Foto + barra lateral</div>
+        </div>
+        <div class="tpl-card" data-tpl="compacto">
+          <div class="mini" style="display:flex;gap:5px;align-items:center;">
+            <div class="mini-dot" style="width:14px;height:14px;background:#4A4A4A;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:80%;"></div><div class="mini-line" style="width:50%;"></div><div class="mini-line" style="width:70%;margin-top:6px;"></div></div>
+          </div>
+          <div class="label">Compacto</div><div class="sub">Foto en línea</div>
+        </div>
+        <div class="tpl-card" data-tpl="acento">
+          <div class="mini" style="padding:0;overflow:hidden;">
+            <div style="background:#7A2E3B;padding:10px 8px 14px;display:flex;justify-content:center;"><div class="mini-dot" style="width:16px;height:16px;background:#fff;border:2px solid #7A2E3B;"></div></div>
+            <div style="padding:6px 9px;"><div class="mini-line" style="width:55%;margin:0 auto 4px;"></div><div class="mini-line" style="width:35%;margin:0 auto;"></div></div>
+          </div>
+          <div class="label">Acento</div><div class="sub">Franja de color</div>
+        </div>
+        <div class="tpl-card" data-tpl="columna">
+          <div class="mini" style="display:flex;gap:6px;flex-direction:row-reverse;">
+            <div class="mini-dot" style="width:22px;height:22px;border-radius:6px;background:#2B6777;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:85%;"></div><div class="mini-line" style="width:55%;"></div><div class="mini-hdr" style="background:#2B6777;"></div><div class="mini-line"></div></div>
+          </div>
+          <div class="label">Columna</div><div class="sub">Foto a la derecha</div>
+        </div>
+        <div class="tpl-card" data-tpl="minimal">
+          <div class="mini" style="display:flex;gap:6px;flex-direction:row-reverse;justify-content:flex-end;">
+            <div class="mini-dot" style="width:14px;height:14px;border-radius:4px;background:#333;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:70%;"></div><div class="mini-line" style="width:45%;margin-top:10px;"></div><div class="mini-line" style="width:60%;"></div></div>
+          </div>
+          <div class="label">Minimal</div><div class="sub">Foto pequeña</div>
+        </div>
+        <div class="tpl-card" data-tpl="elegante">
+          <div class="mini" style="display:flex;gap:6px;">
+            <div class="mini-dot" style="width:22px;height:22px;background:#fff;box-shadow:0 0 0 2px #A9812F;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:80%;"></div><div class="mini-line" style="width:50%;"></div><div class="mini-line" style="width:20px;height:2px;background:#A9812F;margin-top:6px;"></div></div>
+          </div>
+          <div class="label">Elegante</div><div class="sub">Anillo dorado</div>
+        </div>
+        <div class="tpl-card" data-tpl="boldmoderno">
+          <div class="mini" style="display:flex;gap:6px;">
+            <div class="mini-dot" style="width:22px;height:22px;border-radius:2px;background:#1C1D1F;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:85%;"></div><div class="mini-line" style="width:50%;"></div><div class="mini-hdr" style="background:#1C1D1F;"></div></div>
+          </div>
+          <div class="label">Moderno Bold</div><div class="sub">Barras sólidas</div>
+        </div>
+        <div class="tpl-card" data-tpl="corporativo">
+          <div class="mini" style="padding:0;overflow:hidden;">
+            <div style="background:#12283F;padding:10px 8px 14px;display:flex;justify-content:center;"><div class="mini-dot" style="width:16px;height:16px;background:#fff;border:2px solid #12283F;"></div></div>
+            <div style="padding:6px 9px;"><div class="mini-line" style="width:55%;margin:0 auto 4px;"></div><div class="mini-line" style="width:35%;margin:0 auto;"></div></div>
+          </div>
+          <div class="label">Corporativo</div><div class="sub">Franja oscura</div>
+        </div>
+        <div class="tpl-card" data-tpl="creativo">
+          <div class="mini" style="display:flex;gap:6px;flex-direction:row-reverse;background:#F7E7DE;">
+            <div class="mini-dot" style="width:22px;height:22px;background:#fff;box-shadow:0 0 0 2px #B85C38;"></div>
+            <div style="flex:1;"><div class="mini-line" style="width:80%;background:#e3c8b8;"></div><div class="mini-line" style="width:50%;background:#e3c8b8;"></div></div>
+          </div>
+          <div class="label">Creativo</div><div class="sub">Anillo doble</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="step">2</span>Sube tu CV en PDF (opcional)</h3>
+      <div class="dropzone" id="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-title">Arrastra tu PDF aquí o haz clic</div>
+        <div class="dz-sub">Extraemos nombre, contacto y secciones automáticamente</div>
+      </div>
+      <input type="file" id="fileInput" accept="application/pdf">
+      <div class="scanlog" id="scanLog">
+        <div class="scanbar" id="scanBar"></div>
+        <div id="scanRows"></div>
+      </div>
+      <div class="manual-note">Si prefieres no subir nada, puedes escribir todo directamente en el paso 3.</div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="step">3</span>Revisa y ajusta tus datos</h3>
+
+      <details class="acc" open>
+        <summary>Datos personales</summary>
+        <div class="acc-body">
+          <div class="photo-field">
+            <label class="field-label">Foto de perfil (opcional)</label>
+            <div class="photo-row">
+              <div class="photo-preview" id="photoPreview">
+                <span id="photoPlaceholder">Sin foto</span>
+                <img id="photoImg" style="display:none;" alt="">
+              </div>
+              <div class="photo-actions">
+                <button type="button" class="btn secondary small" id="btnPhotoUpload">Subir foto</button>
+                <button type="button" class="btn-link" id="btnPhotoRemove" style="display:none;">Quitar</button>
+                <input type="file" id="photoInput" accept="image/*">
+              </div>
+            </div>
+            <div class="manual-note">Recomendada para las plantillas "con foto". Algunos sistemas ATS de EE. UU. no procesan imágenes: si aplicas ahí, usa una plantilla clásica sin foto.</div>
+          </div>
+          <div><label class="field-label">Nombre completo</label><input type="text" data-field="name"></div>
+          <div><label class="field-label">Puesto / título profesional</label><input type="text" data-field="title"></div>
+          <div class="row2">
+            <div><label class="field-label">Correo</label><input type="text" data-field="email"></div>
+            <div><label class="field-label">Teléfono</label><input type="text" data-field="phone"></div>
+          </div>
+          <div class="row2">
+            <div><label class="field-label">Ubicación</label><input type="text" data-field="location" placeholder="Santo Domingo, RD"></div>
+            <div><label class="field-label">LinkedIn</label><input type="text" data-field="linkedin"></div>
+          </div>
+        </div>
+      </details>
+
+      <details class="acc">
+        <summary>Resumen profesional</summary>
+        <div class="acc-body">
+          <textarea data-field="summary" placeholder="2-3 líneas sobre tu experiencia y fortalezas clave."></textarea>
+        </div>
+      </details>
+
+      <details class="acc">
+        <summary>Experiencia laboral</summary>
+        <div class="acc-body">
+          <textarea data-field="experience" style="min-height:150px" placeholder="Cargo, empresa, fechas y logros. Un salto de línea por punto."></textarea>
+        </div>
+      </details>
+
+      <details class="acc">
+        <summary>Educación</summary>
+        <div class="acc-body">
+          <textarea data-field="education" style="min-height:90px" placeholder="Título, institución, año."></textarea>
+        </div>
+      </details>
+
+      <details class="acc">
+        <summary>Habilidades</summary>
+        <div class="acc-body">
+          <textarea data-field="skills" placeholder="Sepáralas por coma o una por línea."></textarea>
+        </div>
+      </details>
+
+      <details class="acc">
+        <summary>Certificaciones e idiomas</summary>
+        <div class="acc-body">
+          <div><label class="field-label">Certificaciones</label><textarea data-field="certifications" style="min-height:60px"></textarea></div>
+          <div><label class="field-label">Idiomas</label><textarea data-field="languages" style="min-height:50px"></textarea></div>
+        </div>
+      </details>
+
+      <div class="spell-box">
+        <button class="btn secondary" id="btnSpell" type="button">Revisar ortografía</button>
+        <div id="spellResults" class="spell-results"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Por qué es compatible con ATS</h3>
+      <ul class="checklist">
+        <li><span class="ok">✓</span>Una sola columna, sin tablas ni cuadros de texto</li>
+        <li><span class="ok">✓</span>Sin íconos, fotos ni gráficos que el parser no puede leer</li>
+        <li><span class="ok">✓</span>Fuentes estándar y texto 100% seleccionable</li>
+        <li><span class="ok">✓</span>Encabezados de sección claros y convencionales</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="preview-wrap">
+    <div class="preview-toolbar">
+      <button class="btn secondary" id="btnPrint">Descargar como PDF</button>
+    </div>
+    <div class="preview-shell">
+      <div id="previewEmpty" class="preview-empty">
+        <div class="big">📄</div>
+        Sube tu CV o completa el paso 3 para ver la vista previa de tu plantilla.
+      </div>
+      <div class="cv-preview tpl-atemporal" id="preview" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const state = {
+  template: 'atemporal',
+  data: {name:'',title:'',email:'',phone:'',location:'',linkedin:'',summary:'',experience:'',education:'',skills:'',certifications:'',languages:'',photo:''}
+};
+
+// ---------- Template picker ----------
+document.getElementById('tplGrid').addEventListener('click', (e)=>{
+  const card = e.target.closest('.tpl-card');
+  if(!card) return;
+  document.querySelectorAll('.tpl-card').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  state.template = card.dataset.tpl;
+  render();
+});
+
+// ---------- Form bindings ----------
+document.querySelectorAll('[data-field]').forEach(el=>{
+  el.addEventListener('input', ()=>{
+    state.data[el.dataset.field] = el.value;
+    render();
+  });
+});
+
+function fillForm(d){
+  Object.keys(d).forEach(k=>{
+    const el = document.querySelector('[data-field="'+k+'"]');
+    if(el){ el.value = d[k] || ''; state.data[k] = d[k] || ''; }
+  });
+}
+
+// ---------- Render preview ----------
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function section(title, text, pre){
+  if(!text || !text.trim()) return '';
+  return '<section class="cv-section"><h2>'+title+'</h2><div class="cv-body'+(pre?' pre':'')+'">'+esc(text)+'</div></section>';
+}
+
+function skillsHtml(text){
+  if(!text || !text.trim()) return '';
+  const parts = text.includes(',') ? text.split(',') : text.split('\n');
+  const clean = parts.map(p=>p.trim()).filter(Boolean);
+  if(!clean.length) return '';
+  return '<section class="cv-section"><h2>Habilidades</h2><div class="cv-body">'+esc(clean.join(' • '))+'</div></section>';
+}
+
+function render(){
+  const d = state.data;
+  const preview = document.getElementById('preview');
+  const empty = document.getElementById('previewEmpty');
+  const hasContent = d.name || d.summary || d.experience || d.education;
+
+  if(!hasContent){
+    preview.style.display='none';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  preview.style.display='block';
+  preview.className = 'cv-preview tpl-'+state.template;
+
+  const contactBits = [d.email, d.phone, d.location, d.linkedin].filter(Boolean).map(esc);
+  const contactLine = contactBits.join(' &nbsp;·&nbsp; ');
+
+  const photoHtml = d.photo ? '<div class="cv-photo-wrap"><img class="cv-photo" src="'+d.photo+'" alt=""></div>' : '';
+
+  preview.innerHTML =
+    '<header class="cv-head"><div class="cv-head-inner">'+
+      photoHtml+
+      '<div class="cv-head-text">'+
+        '<h1>'+(esc(d.name)||'Tu Nombre Apellido')+'</h1>'+
+        (d.title? '<p class="cv-role">'+esc(d.title)+'</p>' : '')+
+        (contactLine? '<div class="cv-contact">'+contactLine+'</div>' : '')+
+      '</div>'+
+    '</div></header>'+
+    section('Resumen', d.summary)+
+    section('Experiencia', d.experience, true)+
+    section('Educación', d.education, true)+
+    skillsHtml(d.skills)+
+    section('Certificaciones', d.certifications, true)+
+    section('Idiomas', d.languages, true);
+}
+
+// ---------- Foto de perfil ----------
+const photoInput = document.getElementById('photoInput');
+document.getElementById('btnPhotoUpload').addEventListener('click', ()=>photoInput.click());
+document.getElementById('btnPhotoRemove').addEventListener('click', ()=>{
+  state.data.photo = '';
+  updatePhotoPreview();
+  render();
+});
+photoInput.addEventListener('change', ()=>{
+  if(photoInput.files[0]) handlePhoto(photoInput.files[0]);
+});
+
+function handlePhoto(file){
+  if(!file.type.startsWith('image/')){
+    alert('Selecciona un archivo de imagen (JPG, PNG, etc).');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxDim = 480;
+      let w = img.width, h = img.height;
+      if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+      else if(h >= w && h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      state.data.photo = canvas.toDataURL('image/jpeg', 0.85);
+      updatePhotoPreview();
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function updatePhotoPreview(){
+  const ph = document.getElementById('photoPlaceholder');
+  const img = document.getElementById('photoImg');
+  const removeBtn = document.getElementById('btnPhotoRemove');
+  if(state.data.photo){
+    img.src = state.data.photo;
+    img.style.display = 'block';
+    ph.style.display = 'none';
+    removeBtn.style.display = 'inline';
+  }else{
+    img.style.display = 'none';
+    ph.style.display = 'block';
+    removeBtn.style.display = 'none';
+  }
+}
+
+// ---------- PDF upload & extraction ----------
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const scanLog = document.getElementById('scanLog');
+const scanRows = document.getElementById('scanRows');
+const scanBar = document.getElementById('scanBar');
+
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+async function handleFile(file){
+  if(file.type !== 'application/pdf'){
+    logRow('El archivo debe ser un PDF.', true);
+    return;
+  }
+  scanLog.classList.add('show');
+  scanRows.innerHTML='';
+  scanBar.classList.remove('done');
+  logRow('Leyendo '+file.name+' …');
+
+  try{
+    const text = await extractPdfText(file);
+    if(text.trim().length < 30){
+      scanBar.classList.add('done');
+      logRow('No se pudo extraer texto (parece un PDF escaneado). Completa los campos manualmente.', true);
+      return;
+    }
+    const parsed = parseResume(text);
+    scanBar.classList.add('done');
+
+    await delayLog(parsed.name ? '✓ Nombre detectado: '+parsed.name : '– No se detectó un nombre claro');
+    await delayLog(parsed.email ? '✓ Correo detectado' : '– Sin correo detectado');
+    await delayLog(parsed.phone ? '✓ Teléfono detectado' : '– Sin teléfono detectado');
+    await delayLog((parsed.experience ? '✓' : '–') + ' Sección de experiencia');
+    await delayLog((parsed.education ? '✓' : '–') + ' Sección de educación');
+    await delayLog((parsed.skills ? '✓' : '–') + ' Sección de habilidades');
+    await delayLog('Datos cargados en el paso 3. Revísalos antes de descargar.');
+
+    fillForm(parsed);
+    render();
+    document.querySelectorAll('details.acc').forEach(d=>d.open=true);
+  }catch(err){
+    scanBar.classList.add('done');
+    logRow('Ocurrió un problema leyendo el PDF. Completa los campos manualmente.', true);
+  }
+}
+
+function logRow(msg, warn){
+  const row = document.createElement('div');
+  row.className='row';
+  row.style.color = warn ? '#E3B341' : '';
+  row.textContent = msg;
+  scanRows.appendChild(row);
+}
+function delayLog(msg){
+  return new Promise(res=>setTimeout(()=>{ logRow(msg); res(); }, 220));
+}
+
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let fullText = '';
+  for(let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    let lastY = null, line = '';
+    for(const item of content.items){
+      if(lastY !== null && Math.abs(item.transform[5] - lastY) > 2){
+        fullText += line.trim() + '\n';
+        line = '';
+      }
+      line += item.str + ' ';
+      lastY = item.transform[5];
+    }
+    fullText += line.trim() + '\n\n';
+  }
+  return fullText;
+}
+
+// ---------- Heuristic resume parser ----------
+function normalize(s){
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+const SECTION_DEFS = [
+  ['summary', ['resumen profesional','perfil profesional','resumen','perfil','objetivo','acerca de','sobre mi','summary','profile']],
+  ['experience', ['experiencia laboral','experiencia profesional','historial laboral','experiencia','work experience','employment history']],
+  ['education', ['formacion academica','educacion','formacion','estudios','education']],
+  ['skills', ['habilidades tecnicas','habilidades','competencias','destrezas','conocimientos','skills']],
+  ['certifications', ['certificaciones','certificados','cursos y certificaciones','cursos','certifications']],
+  ['languages', ['idiomas','languages']]
+];
+
+function matchSection(line){
+  const n = normalize(line).replace(/[:•\-–]+$/,'').trim();
+  if(!n || n.length>45) return null;
+  for(const [key, keys] of SECTION_DEFS){
+    for(const k of keys){
+      if(n===k || n.startsWith(k+' ') || (n.length<25 && n===k)) return key;
+    }
+  }
+  return null;
+}
+
+function parseResume(raw){
+  const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+
+  const email = (raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [''])[0];
+  const phone = (raw.match(/(\+?\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}/) || [''])[0].trim();
+  const linkedinMatch = raw.match(/linkedin\.com\/[A-Za-z0-9\-_\/]+/i);
+  const linkedin = linkedinMatch ? 'https://'+linkedinMatch[0].replace(/^https?:\/\//i,'') : '';
+
+  let name='', title='';
+  for(let i=0; i<Math.min(lines.length,8); i++){
+    const l = lines[i];
+    if(l.includes('@') || /\d{3}/.test(l) || normalize(l).includes('linkedin')) continue;
+    const wc = l.split(/\s+/).length;
+    if(!name && wc>=1 && wc<=5 && l.length<50){ name=l; continue; }
+    if(name && !title && wc<=6 && l.length<60 && !matchSection(l)){ title=l; break; }
+  }
+
+  const boundaries = [];
+  lines.forEach((l,i)=>{
+    const key = matchSection(l);
+    if(key) boundaries.push({i,key});
+  });
+
+  const sections = {summary:'',experience:'',education:'',skills:'',certifications:'',languages:''};
+  for(let b=0; b<boundaries.length; b++){
+    const start = boundaries[b].i + 1;
+    const end = (b+1 < boundaries.length) ? boundaries[b+1].i : lines.length;
+    sections[boundaries[b].key] = lines.slice(start,end).join('\n').trim();
+  }
+
+  if(!sections.summary){
+    const firstBoundary = boundaries.length ? boundaries[0].i : lines.length;
+    const preLines = lines.slice(0, firstBoundary).filter(l=>{
+      if(l===name || l===title) return false;
+      if(l.includes('@')) return false;
+      if(/\d{3}/.test(l) && l.length<30) return false;
+      if(normalize(l).includes('linkedin')) return false;
+      return true;
+    });
+    sections.summary = preLines.join(' ').trim();
+  }
+
+  return {name, title, email, phone, location:'', linkedin, ...sections};
+}
+
+// ---------- Ortografía (español) ----------
+// Activa el corrector nativo del navegador (subrayado en tiempo real) en
+// todos los campos de texto.
+document.querySelectorAll('input[type=text], textarea').forEach(el=>{
+  el.setAttribute('spellcheck','true');
+  el.setAttribute('lang','es');
+});
+
+// Además, un chequeo propio enfocado en errores típicos de un CV en español:
+// palabras que casi siempre llevan tilde y se escriben sin ella, y un par
+// de errores gramaticales comunes. No sustituye al corrector del navegador,
+// lo complementa con un listado explícito y corrección con un clic.
+const COMMON_FIXES = {
+  administracion:'administración', atencion:'atención', comunicacion:'comunicación',
+  direccion:'dirección', educacion:'educación', formacion:'formación', gestion:'gestión',
+  informacion:'información', capacitacion:'capacitación', organizacion:'organización',
+  planificacion:'planificación', produccion:'producción', supervision:'supervisión',
+  negociacion:'negociación', implementacion:'implementación', optimizacion:'optimización',
+  investigacion:'investigación', evaluacion:'evaluación', coordinacion:'coordinación',
+  certificacion:'certificación', publicacion:'publicación', distribucion:'distribución',
+  resolucion:'resolución', digitalizacion:'digitalización', automatizacion:'automatización',
+  tecnologia:'tecnología', metodologia:'metodología', logistica:'logística',
+  estadistica:'estadística', informatica:'informática', matematicas:'matemáticas',
+  analisis:'análisis', tecnico:'técnico', tecnica:'técnica', academico:'académico',
+  economico:'económico', electronico:'electrónico', basico:'básico', logico:'lógico',
+  telefono:'teléfono', codigo:'código', maximo:'máximo', minimo:'mínimo', optimo:'óptimo',
+  ultimo:'último', proximo:'próximo', rapido:'rápido', facil:'fácil', dificil:'difícil',
+  lider:'líder', liderazgo:'liderazgo', segun:'según', ademas:'además', tambien:'también',
+  compania:'compañía', espanol:'español', ingles:'inglés', frances:'francés',
+  autonoma:'autónoma', autonomo:'autónomo', titulo:'título', graduacion:'graduación',
+  ingenieria:'ingeniería', pedagogia:'pedagogía', psicologia:'psicología', biologia:'biología',
+  quimica:'química', fisica:'física', haiga:'haya', hicistes:'hiciste', vinistes:'viniste',
+  aser:'a ser', deacuerdo:'de acuerdo', atravez:'a través'
+};
+
+function replaceCase(match, replacement){
+  if(match === match.toUpperCase()) return replacement.toUpperCase();
+  if(match[0] === match[0].toUpperCase()) return replacement[0].toUpperCase()+replacement.slice(1);
+  return replacement;
+}
+
+const SPELL_FIELDS = [
+  ['title','Puesto'], ['summary','Resumen'], ['experience','Experiencia'],
+  ['education','Educación'], ['skills','Habilidades'],
+  ['certifications','Certificaciones'], ['languages','Idiomas']
+];
+
+function findSpellIssues(){
+  const issues = [];
+  SPELL_FIELDS.forEach(([field,label])=>{
+    const text = state.data[field] || '';
+    if(!text) return;
+    const seen = new Set();
+    const re = /[a-záéíóúñü]+/gi;
+    let m;
+    while((m = re.exec(text)) !== null){
+      const word = m[0];
+      const key = normalize(word);
+      const fixWord = COMMON_FIXES[key];
+      const alreadyCorrect = fixWord && word.toLowerCase() === fixWord.toLowerCase();
+      if(fixWord && !alreadyCorrect && !seen.has(key)){
+        seen.add(key);
+        issues.push({field, label, wrong: word, fix: replaceCase(word, fixWord)});
+      }
+    }
+  });
+  return issues;
+}
+
+function renderSpellResults(issues){
+  const box = document.getElementById('spellResults');
+  if(!issues.length){
+    box.innerHTML = '<div class="spell-ok">✓ No encontramos errores ortográficos comunes en tu texto.</div><div class="spell-hint">El subrayado rojo del navegador (mientras escribes) sigue activo para detectar otras palabras.</div>';
+    return;
+  }
+  const items = issues.map(i =>
+    '<li><b>'+esc(i.wrong)+'</b><span class="arrow">→</span><span class="fix">'+esc(i.fix)+'</span><span class="where">'+i.label+'</span></li>'
+  ).join('');
+  box.innerHTML =
+    '<ul class="spell-list">'+items+'</ul>'+
+    '<button class="btn" id="btnFixAll" type="button" style="width:100%;">Corregir todo ('+issues.length+')</button>'+
+    '<div class="spell-hint">Revisamos vocabulario típico de un CV (tildes en palabras como "gestión", "análisis", "técnico", etc). Sigue apoyándote en el subrayado rojo del navegador para el resto del texto.</div>';
+
+  document.getElementById('btnFixAll').addEventListener('click', ()=>{
+    issues.forEach(i=>{
+      const key = normalize(i.wrong);
+      const correct = COMMON_FIXES[key];
+      const current = state.data[i.field] || '';
+      const wordRe = new RegExp('\\b'+i.wrong.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','g');
+      state.data[i.field] = current.replace(wordRe, m => replaceCase(m, correct));
+      const el = document.querySelector('[data-field="'+i.field+'"]');
+      if(el) el.value = state.data[i.field];
+    });
+    render();
+    renderSpellResults(findSpellIssues());
+  });
+}
+
+document.getElementById('btnSpell').addEventListener('click', ()=>{
+  renderSpellResults(findSpellIssues());
+});
+
+// ---------- Print / download ----------
+document.getElementById('btnPrint').addEventListener('click', ()=>{
+  const preview = document.getElementById('preview');
+  if(preview.style.display === 'none'){
+    alert('Completa al menos tu nombre y una sección antes de descargar.');
+    return;
+  }
+
+  // Abrimos una ventana nueva e independiente para imprimir: dentro de la
+  // vista previa incrustada, window.print() suele quedar bloqueado por el
+  // navegador o por el sandbox del visor.
+  const printWin = window.open('', '_blank');
+  if(!printWin){
+    alert('Tu navegador bloqueó la ventana emergente. Permite pop-ups para este sitio e inténtalo de nuevo.');
+    return;
+  }
+
+  const pageStyles = document.querySelector('style').textContent;
+  const docTitle = (state.data.name || 'CV').trim();
+
+  printWin.document.open();
+  printWin.document.write(
+    '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'+
+    '<title>'+esc(docTitle)+'</title>'+
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'+
+    '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">'+
+    '<style>'+pageStyles+
+    'html,body{background:#fff;margin:0;padding:0;}'+
+    '.cv-preview{box-shadow:none;max-width:100%;margin:0 auto;}'+
+    '@media print{ @page{margin:0;} .cv-preview{padding:14mm 16mm;} }'+
+    '</style></head><body></body></html>'
+  );
+  printWin.document.close();
+
+  const clone = preview.cloneNode(true);
+  clone.style.display = 'block';
+
+  let done = false;
+  const finishAndPrint = ()=>{
+    if(done) return;
+    done = true;
+    printWin.document.body.appendChild(clone);
+    printWin.focus();
+    setTimeout(()=>{ printWin.print(); }, 200);
+  };
+
+  if(printWin.document.readyState === 'complete'){
+    finishAndPrint();
+  }else{
+    printWin.onload = finishAndPrint;
+    // Respaldo por si onload no dispara (algunos navegadores con document.write)
+    setTimeout(finishAndPrint, 600);
+  }
+});
+
+render();
+</script>
+</body>
+</html>
